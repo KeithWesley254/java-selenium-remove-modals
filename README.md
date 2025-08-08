@@ -99,7 +99,7 @@ Ensure the following are installed:
 
 - Java **17+**
 - Maven **3.8+**
-- Google Chrome browser
+- Docker Containers containing all required standalone browsers e.g. Chrome
 
 ---
 
