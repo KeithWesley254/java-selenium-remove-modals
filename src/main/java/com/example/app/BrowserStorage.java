@@ -15,12 +15,14 @@ public class BrowserStorage {
             case "firefox":
                 FirefoxOptions firefoxOptions = new FirefoxOptions();
                 firefoxOptions.addArguments("-private", "--disable-extensions");
+                firefoxOptions.addArguments("--start-maximized");
                 firefoxOptions.addPreference("browser.privatebrowsing.autostart", true);
                 return new RemoteWebDriver(new URL(remoteUrl), firefoxOptions);
 
             case "edge":
                 EdgeOptions edgeOptions = new EdgeOptions();
                 edgeOptions.addArguments("--inprivate", "--disable-extensions");
+                edgeOptions.addArguments("--start-maximized");
                 return new RemoteWebDriver(new URL(remoteUrl), edgeOptions);
 
             case "chrome":

@@ -11,30 +11,33 @@ import java.util.Set;
 public class HbrPageActions {
 
     private final WebDriver driver;
-    private final WebDriverWait wait;
+    private final WebDriverWait longWait;
 
+    // A constructor to load the variables into this instance of HbrPageActions
     public HbrPageActions(WebDriver driver) {
         this.driver = driver;
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.longWait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
     public void closeInitialModalIfPresent() {
         try {
-            WebDriverWait longWait = new WebDriverWait(driver, Duration.ofSeconds(10));
             WebElement modal = longWait.until(ExpectedConditions.presenceOfElementLocated(
                 By.cssSelector("div[class*='Modal-module_container']")
             ));
 
             try {
+                // This will try to close any Modals with a close button
                 WebElement closeBtn = modal.findElement(By.cssSelector("button[aria-label='Close']"));
                 if (closeBtn.isDisplayed() && closeBtn.isEnabled()) {
                     closeBtn.click();
                     System.out.println("Clicked modal close button.");
                 } else {
-                    hideModalUsingJS(modal);
+                    // This will be called in case no close button is available
+                    GenUtils.hideModalUsingJS(driver, modal);
                 }
             } catch (NoSuchElementException ce) {
-                hideModalUsingJS(modal);
+                // This will be called in case the element did not appear
+                GenUtils.hideModalUsingJS(driver, modal);
             }
 
             Thread.sleep(2000); // wait for modal to disappear
@@ -43,36 +46,13 @@ public class HbrPageActions {
         } catch (InterruptedException ignored) {}
     }
 
-    private void hideModalUsingJS(WebElement modal) {
-        try {
-            JavascriptExecutor js = (JavascriptExecutor) driver;
-            js.executeScript("""
-                arguments[0].style.display = 'none';
-                document.body.style.overflow = 'auto';
-                let backdrop = document.querySelector('[class*="Backdrop"]');
-                if (backdrop) backdrop.style.display = 'none';
-            """, modal);
-            System.out.println("Modal was hidden via JS.");
-        } catch (Exception ex) {
-            System.out.println("Failed to hide modal: " + ex.getMessage());
-        }
-    }
-
     public void checkHomepageTitle(String expectedPageTitle) {
         String actualPageTitle = driver.getTitle();
 
         // Make all dashes similar
-        String normalizedActual = actualPageTitle
-                .replace("\u2013", "-")
-                .replace("\u2014", "-") 
-                .replaceAll("\\s*-\\s*", " - ") 
-                .trim();
+        String normalizedActual = GenUtils.normalizeDashes(actualPageTitle);
 
-        String normalizedExpected = expectedPageTitle
-                .replace("\u2013", "-")
-                .replace("\u2014", "-")
-                .replaceAll("\\s*-\\s*", " - ")
-                .trim();
+        String normalizedExpected = GenUtils.normalizeDashes(expectedPageTitle);
 
         Assertions.assertEquals(normalizedExpected, normalizedActual, 
             "Page title mismatch before search.");
@@ -84,24 +64,24 @@ public class HbrPageActions {
     public void signInWithFakeCredentialsAndRetry() {
         try {
             // Open the Sign In form
-            WebElement signInButton = wait.until(ExpectedConditions.elementToBeClickable(
+            WebElement signInButton = longWait.until(ExpectedConditions.elementToBeClickable(
                 By.xpath("//button[@id='sign-in-button-header']")
             ));
             signInButton.click();
 
             // Wait for input fields
-            WebElement emailInput = wait.until(ExpectedConditions.visibilityOfElementLocated(
+            WebElement emailInput = longWait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("input[id='text-input:r0:']")
             ));
             WebElement passwordInput = driver.findElement(By.cssSelector("input[id='text-input:r1:']"));
 
             // First attempt
-            typeSlowly(emailInput, "johnConstantine@example.com");
-            typeSlowly(passwordInput, "johnConstantine123");
-            clickEnabledSubmitButton();
+            GenUtils.typeSlowly(emailInput, "johnConstantine@example.com");
+            GenUtils.typeSlowly(passwordInput, "johnConstantine123");
+            GenUtils.clickEnabledSubmitButton(driver, 10, ".Button-module_btn__daEdK.SignInForm-module_btn__qTJMX.Button-module_alternate__iLJoF");
 
             // Wait for and print error message
-            WebElement errorMessage = wait.until(ExpectedConditions.visibilityOfElementLocated(
+            WebElement errorMessage = longWait.until(ExpectedConditions.visibilityOfElementLocated(
                 By.xpath("//span[@class='AlertMessage-module_error-message__nmgov']")
             ));
             System.out.println("Sign In Error Message: " + errorMessage.getText());
@@ -110,8 +90,8 @@ public class HbrPageActions {
             Thread.sleep(3000); // Simulate user reading error
 
             emailInput.clear();
-            typeSlowly(emailInput, "freddyKruger@example.com");
-            clickEnabledSubmitButton();
+            GenUtils.typeSlowly(emailInput, "freddyKruger@example.com");
+            GenUtils.clickEnabledSubmitButton(driver, 10, ".Button-module_btn__daEdK.SignInForm-module_btn__qTJMX.Button-module_alternate__iLJoF");
 
             System.out.println("Retried Sign In with second email.");
 
@@ -131,7 +111,7 @@ public class HbrPageActions {
             // String originalWindow = driver.getWindowHandle();
             Set<String> existingWindows = driver.getWindowHandles();
 
-            WebElement subscribe = wait.until(ExpectedConditions.elementToBeClickable(
+            WebElement subscribe = longWait.until(ExpectedConditions.elementToBeClickable(
                 By.cssSelector(".Anchor-module_anchor__uhpem.Header-module_subscribe-button__mGvj9")
             ));
             subscribe.click();
@@ -167,16 +147,17 @@ public class HbrPageActions {
 
     public void extract3Titles() {
 
-        WebElement featuredTitle = wait.until(ExpectedConditions.elementToBeClickable(
+        WebElement featuredTitle = longWait.until(ExpectedConditions.elementToBeClickable(
             By.cssSelector(".Featured_title__MsPRd")
         ));
-        WebElement firstTopTitle = wait.until(ExpectedConditions.elementToBeClickable(
+        WebElement firstTopTitle = longWait.until(ExpectedConditions.elementToBeClickable(
             By.xpath("(//h2[contains(@class, 'ForYouCard_title')])[1]")
         ));
-        WebElement secondSupportTitle = wait.until(ExpectedConditions.elementToBeClickable(
+        WebElement secondSupportTitle = longWait.until(ExpectedConditions.elementToBeClickable(
             By.xpath("(//h2[contains(@class, 'ForYouCard_title')])[2]")
         ));
 
+        // Check that the last title is displayed and print all titles
         boolean flag = secondSupportTitle.isDisplayed();
 
         if (flag) {
@@ -185,41 +166,5 @@ public class HbrPageActions {
             System.out.println("The Second Support Title: " + secondSupportTitle.getText());
         }
     }
-
-    private void typeSlowly(WebElement input, String text) throws InterruptedException {
-        input.clear();
-        for (char c : text.toCharArray()) {
-            input.sendKeys(String.valueOf(c));
-            Thread.sleep(75); // simulate real typing
-        }
-    }
-
-    private void clickEnabledSubmitButton() {
-        try {
-            WebDriverWait buttonWait = new WebDriverWait(driver, Duration.ofSeconds(10));
-            WebElement submitButton = buttonWait.until(driver -> {
-                WebElement btn = driver.findElement(By.cssSelector(
-                    ".Button-module_btn__daEdK.SignInForm-module_btn__qTJMX.Button-module_alternate__iLJoF"
-                ));
-                return btn.isEnabled() ? btn : null;
-            });
-
-            // Scroll into view
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", submitButton);
-
-            // Click (normal or JS fallback)
-            try {
-                submitButton.click();
-            } catch (ElementClickInterceptedException e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", submitButton);
-            }
-
-            System.out.println("Clicked submit button.");
-
-        } catch (Exception e) {
-            System.out.println("Failed to click submit button: " + e.getMessage());
-        }
-    }
-
 
 }

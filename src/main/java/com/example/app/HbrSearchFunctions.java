@@ -12,39 +12,39 @@ import org.junit.jupiter.api.Assertions;
 
 public class HbrSearchFunctions {
     private final WebDriver driver;
-    private final WebDriverWait wait;
+    private final WebDriverWait longWait;
 
     public HbrSearchFunctions(WebDriver driver) {
         this.driver = driver;
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.longWait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
     public void performSearchAndAssert(String query) {
         try {
             // Open the search UI
-            WebElement searchToggle = wait.until(
+            WebElement searchToggle = longWait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[aria-label*='Search']"))
             );
             searchToggle.click();
 
             // Wait for the search input
-            WebElement searchInput = wait.until(
+            WebElement searchInput = longWait.until(
                 ExpectedConditions.elementToBeClickable(By.name("term"))
             );
 
             // Clear and type query
             searchInput.clear();
-            typeSlowly(searchInput, query);
+            GenUtils.typeSlowly(searchInput, query);
             searchInput.sendKeys(Keys.ENTER);
 
             // Wait for title to contain query
-            wait.until(ExpectedConditions.titleContains(query));
+            longWait.until(ExpectedConditions.titleContains(query));
 
             String newPageTitle = driver.getTitle();
 
             // Normalize the dashes for comparison
-            String normalizedTitle = normalizeDashes(newPageTitle);
-            String normalizedQuery = normalizeDashes(query);
+            String normalizedTitle = GenUtils.normalizeDashes(newPageTitle);
+            String normalizedQuery = GenUtils.normalizeDashes(query);
 
             Assertions.assertTrue(
                 normalizedTitle.toLowerCase().contains(normalizedQuery.toLowerCase()),
@@ -54,12 +54,12 @@ public class HbrSearchFunctions {
             System.out.println("Verified new page title after search: " + newPageTitle);
 
             // Assert the search results count
-            WebElement resultsHeader = wait.until(
+            WebElement resultsHeader = longWait.until(
                 ExpectedConditions.presenceOfElementLocated(By.cssSelector("h3[aria-label*='search results found']"))
             );
 
             String resultsText = resultsHeader.getAttribute("aria-label");
-            int actualResultCount = extractNumberFromText(resultsText);
+            int actualResultCount = GenUtils.extractNumberFromText(resultsText);
 
             Assertions.assertTrue(
                 actualResultCount > 0,
@@ -69,7 +69,7 @@ public class HbrSearchFunctions {
             System.out.println("Successfully found search results count: " + actualResultCount);
 
             // Get and print the first search result title
-            WebElement firstResultTitle = wait.until(
+            WebElement firstResultTitle = longWait.until(
                 ExpectedConditions.visibilityOfElementLocated(
                     By.cssSelector("a[js-target='search-item']")
                 )
@@ -80,30 +80,6 @@ public class HbrSearchFunctions {
         } catch (Exception e) {
             throw new RuntimeException("Failed to perform search for query: " + query, e);
         }
-    }
-
-
-    private void typeSlowly(WebElement input, String text) throws InterruptedException {
-        input.clear();
-        for (char c : text.toCharArray()) {
-            input.sendKeys(String.valueOf(c));
-            Thread.sleep(75); // simulate real typing
-        }
-    }
-
-    private int extractNumberFromText(String text) {
-        String numberString = text.replaceAll("[^\\d,]", ""); // Keep only digits and commas
-        numberString = numberString.replace(",", ""); // Remove commas
-        return Integer.parseInt(numberString);
-    }
-
-    private String normalizeDashes(String text) {
-        if (text == null) return "";
-        // Replace all dash types with a single hyphen, normalize spaces around it
-        return text
-            .replaceAll("[‐-‒–—―]", "-")
-            .replaceAll("\\s*-\\s*", " - ")
-            .trim();
     }
 
 }
